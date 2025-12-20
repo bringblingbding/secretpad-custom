@@ -25,6 +25,37 @@ server:
     mime-types: text/html,text/xml,text/plain,text/css,application/javascript,application/json
     min-response-size: 1024
 
+# spring:
+#   quartz:
+#     job-store-type: jdbc
+#     jdbc:
+#       initialize-schema: never
+#     properties:
+#       org.quartz.scheduler.instanceName: secretpadScheduler
+#       org.quartz.jobStore.isClustered: false
+#   task:
+#     scheduling:
+#       pool:
+#         size: 10
+#   application:
+#     name: secretpad
+#   jpa:
+#     database-platform: org.hibernate.community.dialect.SQLiteDialect
+#     show-sql: false
+#     properties:
+#       hibernate:
+#         format_sql: false
+#     open-in-view: false
+#   datasource:
+#     default:
+#       driver-class-name: org.sqlite.JDBC
+#       jdbc-url: jdbc:sqlite:./db/secretpad.sqlite
+#     quartz:
+#       driver-class-name: org.h2.Driver
+#       jdbc-url: jdbc:h2:./db/secretpadQuartz.mv.db;DB_CLOSE_ON_EXIT=FALSE
+#       username: sa
+#       password: password
+#  datasource used for mysql
 spring:
   quartz:
     job-store-type: jdbc
@@ -40,44 +71,26 @@ spring:
   application:
     name: secretpad
   jpa:
-    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     show-sql: false
     properties:
       hibernate:
         format_sql: false
-    open-in-view: false
   datasource:
     default:
-      driver-class-name: org.sqlite.JDBC
-      jdbc-url: jdbc:sqlite:./db/secretpad.sqlite
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://127.0.0.1:3306/secretpad?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=UTC
+      username: root
+      password: A>)2k-u?Qr=MZn74
+      hikari:
+        idle-timeout: 60000
+        maximum-pool-size: 10
+        connection-timeout: 5000
     quartz:
       driver-class-name: org.h2.Driver
       jdbc-url: jdbc:h2:./db/secretpadQuartz.mv.db;DB_CLOSE_ON_EXIT=FALSE
       username: sa
       password: password
-  #datasource used for mysql
-  #spring:
-  #  task:
-  #    scheduling:
-  #      pool:
-  #        size: 10
-  #  application:
-  #    name: secretpad
-  #  jpa:
-  #    database-platform: org.hibernate.dialect.MySQLDialect
-  #    show-sql: false
-  #    properties:
-  #      hibernate:
-  #        format_sql: false
-  #  datasource:
-  #    driver-class-name: com.mysql.cj.jdbc.Driver
-  #    url: your mysql url
-  #    username:
-  #    password:
-  #    hikari:
-  #      idle-timeout: 60000
-  #      maximum-pool-size: 10
-  #      connection-timeout: 5000
   jackson:
     deserialization:
       fail-on-missing-external-type-id-property: false

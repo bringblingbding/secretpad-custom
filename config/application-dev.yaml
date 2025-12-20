@@ -7,7 +7,7 @@ springdoc:
     enabled: true
 
 secretpad:
-  platform-type: CENTER    # CENTER  EDGE  AUTONOMY
+  platform-type: AUTONOMY    # CENTER  EDGE  AUTONOMY
   deploy-mode: ${DEPLOY_MODE:ALL-IN-ONE} # MPC TEE ALL-IN-ONE
   node-id: ${NODE_ID:kuscia-system} # install.sh -n
   gateway: ${KUSCIA_GW_ADDRESS:127.0.0.1:18301} # install.sh -q envoy port (used in autonomy or master or edge mode)

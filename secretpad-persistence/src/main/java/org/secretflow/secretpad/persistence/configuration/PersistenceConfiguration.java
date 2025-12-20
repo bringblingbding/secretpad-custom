@@ -47,7 +47,14 @@ public class PersistenceConfiguration {
         initializer.setDataSource(dataSource);
         initializer.setDatabasePopulator((Connection connection) -> {
             try (Statement statement = connection.createStatement()) {
-                statement.execute("PRAGMA journal_mode=WAL;");
+                String dbProduct = connection.getMetaData().getDatabaseProductName();     //获取数据库类型作为是否执行PRAGMA的条件
+                log.info("Database product name: {}", dbProduct);
+                if ("SQLite".equalsIgnoreCase(dbProduct)) {                               //SQLite数据库执行PRAGMA
+                    log.info("SQLite detected, enabling WAL mode");
+                    statement.execute("PRAGMA journal_mode=WAL;");
+                } else {                                                                  //非SQLite数据库（MYSQL）不执行PRAGMA，因为这是SQLite的语句
+                    log.info("Non-SQLite database detected, skipping WAL configuration");
+                }
             }
         });
         return initializer;

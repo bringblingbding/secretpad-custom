@@ -719,12 +719,12 @@ public class GraphServiceImpl implements GraphService {
     private ProjectGraphDO ownerCheck(String projectId, String graphId) {
         Optional<ProjectGraphDO> graphOptional = graphRepository.findById(new ProjectGraphDO.UPK(projectId, graphId));
         if (graphOptional.isEmpty()) {
-            throw SecretpadException.of(GraphErrorCode.GRAPH_NOT_EXISTS);
+            throw SecretpadException.of(GraphErrorCode.GRAPH_NOT_EXISTS);               //确保项目中有对应的图存在
         }
         ProjectGraphDO graphDO = graphOptional.get();
         String ownerId = UserContext.getUser().getOwnerId();
         if (!StringUtils.equals(ownerId, graphDO.getOwnerId())) {
-            throw SecretpadException.of(GraphErrorCode.NON_OUR_CREATION_CAN_VIEWED);
+            throw SecretpadException.of(GraphErrorCode.NON_OUR_CREATION_CAN_VIEWED);    //确保该用户是图的创建者
         }
         return graphDO;
     }

@@ -83,7 +83,8 @@ public class DynamicKusciaChannelProvider {
     @Value("${secretpad.kuscia-path:./config/kuscia/}")
     private String kusciaPath;
 
-    private static <T> @NotNull String getServiceName(Class<T> clazz) {
+    @NotNull
+    private static <T> String getServiceName(Class<T> clazz) {
         String serviceName;
         try {
             serviceName = String.valueOf(clazz.getDeclaredField("SERVICE_NAME").get(null));

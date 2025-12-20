@@ -567,7 +567,8 @@ create table if not exists `feature_table`
     `status`             varchar(16) not null, -- Available,Unavailable
     `is_deleted`         tinyint(1) default '0' not null, -- delete flag
     `gmt_create`         datetime default current_timestamp not null, -- create time
-    `gmt_modified`       datetime default current_timestamp not null -- modified time
+    `gmt_modified`       datetime default current_timestamp not null, -- modified time
+    `datasource_id`      VARCHAR(64) NOT NULL DEFAULT 'http-data-source' -- default datasource
 );
 
 create unique index `upk_feature_table_id` on `feature_table` (`feature_table_id`);

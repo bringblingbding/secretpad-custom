@@ -39,8 +39,8 @@ public class DataSourceConfig {
     @ConfigurationProperties("spring.datasource.default")
     public DataSource defaultDataSource() {
         HikariDataSource hikariDataSource = DataSourceBuilder.create().type(HikariDataSource.class).build();
-        hikariDataSource.setMaximumPoolSize(1);
-        hikariDataSource.setMinimumIdle(1);
+        hikariDataSource.setMaximumPoolSize(10);
+        hikariDataSource.setMinimumIdle(5);
         hikariDataSource.setConnectionTimeout(20000);
         hikariDataSource.setIdleTimeout(60000);
         return hikariDataSource;

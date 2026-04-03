@@ -41,9 +41,15 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final AuthService authService;
 
+/**
+ * 认证控制器类的构造函数
+ * 通过依赖注入方式注入AuthService服务
+ *
+ * @param authService 认证服务接口实现类，用于处理用户认证相关业务逻辑
+ */
     @Autowired
     public AuthController(AuthService authService) {
-        this.authService = authService;
+        this.authService = authService; // 将注入的认证服务实例赋值给类的成员变量
     }
 
     /**

@@ -68,11 +68,13 @@ public class GraphController {
      */
     @PostMapping("/component/list")
     @Operation(summary = "component list")
-    @ApiResource(code = ApiResourceCodeConstants.GRAPH_COMM_LIST)
-    public SecretPadResponse<Map<String, CompListVO>> listComponents() {
-        return SecretPadResponse.success(graphService.listComponents());
+//    @ApiResource(code = ApiResourceCodeConstants.GRAPH_COMM_LIST)
+    public SecretPadResponse<Map<String, CompListVO>> listComponents(@RequestBody(required = false) ListComponentsRequest request) {
+        // 调用带参数的 Service 方法
+        // 如果 request 为空，或者 projectId 为空，则传 null 给 Service
+        String projectId = (request != null) ? request.getProjectId() : null;
+        return SecretPadResponse.success(graphService.listComponents(projectId));
     }
-
     /**
      * Batch query component detail list api
      *

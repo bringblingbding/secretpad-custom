@@ -59,22 +59,25 @@ public class SecretPadResponse<T> {
 
     /**
      * SecretPad response status class
+ * 这是一个用于表示SecretPad响应状态的静态内部类
      */
-    @Builder
-    @Getter
-    @AllArgsConstructor
-    @NoArgsConstructor
-    @ToString
+    @Builder // 使用Builder模式构建对象，提供链式调用构建方法
+    @Getter // 使用Lombok自动生成getter方法
+    @AllArgsConstructor // 使用Lombok生成全参数构造方法
+    @NoArgsConstructor // 使用Lombok生成无参构造方法
+    @ToString // 使用Lombok自动生成toString方法
     public static class SecretPadResponseStatus {
         /**
          * Status code
+     * 表示响应状态码，用于标识请求的处理结果
          */
-        @Schema(description = "status code")
+        @Schema(description = "status code") // 使用Schema注解描述API文档中的字段含义
         private Integer code;
         /**
          * Status message
+     * 表示响应状态信息，用于描述具体的处理结果或错误信息
          */
-        @Schema(description = "status message")
+        @Schema(description = "status message") // 使用Schema注解描述API文档中的字段含义
         private String msg;
     }
 }

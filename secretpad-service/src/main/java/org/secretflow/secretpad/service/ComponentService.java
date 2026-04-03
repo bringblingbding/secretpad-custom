@@ -41,7 +41,8 @@ public interface ComponentService {
      *
      * @return component list view object
      */
-    Map<String, CompListVO> listComponents();
+
+    Map<String, CompListVO> listComponents(String projectId);
 
     /**
      * Get component by component key

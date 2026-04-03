@@ -10,7 +10,7 @@ server:
       force: true
     session:
       timeout: 30m
-  http-port: 8080
+  http-port: 8089
   http-port-inner: 9001
   port: 443
   ssl:
@@ -79,7 +79,7 @@ spring:
   datasource:
     default:
       driver-class-name: com.mysql.cj.jdbc.Driver
-      jdbc-url: jdbc:mysql://127.0.0.1:3306/secretpad?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=UTC
+      jdbc-url: jdbc:mysql://172.21.32.1:3306/secretpad?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true
       username: root
       password: A>)2k-u?Qr=MZn74
       hikari:
@@ -152,23 +152,6 @@ kuscia:
       key-file: config/certs/client.pem
       token: config/certs/token
 
-    - domainId: alice
-      mode: lite
-      host: ${KUSCIA_API_LITE_ALICE_ADDRESS:root-kuscia-lite-alice}
-      port: ${KUSCIA_API_PORT:8083}
-      protocol: ${KUSCIA_PROTOCOL:tls}
-      cert-file: config/certs/alice/client.crt
-      key-file: config/certs/alice/client.pem
-      token: config/certs/alice/token
-
-    - domainId: bob
-      mode: lite
-      host: ${KUSCIA_API_LITE_BOB_ADDRESS:root-kuscia-lite-bob}
-      port: ${KUSCIA_API_PORT:8083}
-      protocol: ${KUSCIA_PROTOCOL:tls}
-      cert-file: config/certs/bob/client.crt
-      key-file: config/certs/bob/client.pem
-      token: config/certs/bob/token
 
 
 job:
@@ -258,7 +241,7 @@ data:
     - org.secretflow.secretpad.persistence.entity.ProjectScheduleDO
     - org.secretflow.secretpad.persistence.entity.ProjectScheduleJobDO
     - org.secretflow.secretpad.persistence.entity.ProjectScheduleTaskDO
-
+    - org.secretflow.secretpad.persistence.entity.StrategyUsageTemplateDO
 
 inner-port:
   path:

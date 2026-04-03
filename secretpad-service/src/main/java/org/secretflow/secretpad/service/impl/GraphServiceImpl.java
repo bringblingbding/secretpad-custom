@@ -154,8 +154,8 @@ public class GraphServiceImpl implements GraphService {
     private ProjectScheduleJobRepository projectScheduleJobRepository;
 
     @Override
-    public Map<String, CompListVO> listComponents() {
-        return componentService.listComponents();
+    public Map<String, CompListVO> listComponents(String projectId) {
+        return componentService.listComponents(projectId);
     }
 
     @Override

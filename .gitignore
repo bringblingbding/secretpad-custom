@@ -78,3 +78,5 @@ docs/_build
 /config/ehcache-data/
 /db/secretpadQuartz.mv.db.mv.db
 /.cloudide/
+hs_err_pid*.log
+replay_pid*.log

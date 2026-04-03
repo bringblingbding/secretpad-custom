@@ -37,7 +37,7 @@ public interface GraphService {
      *
      * @return component list view object
      */
-    Map<String, CompListVO> listComponents();
+    Map<String, CompListVO> listComponents(String projectId);
 
     /**
      * Query component by get component request

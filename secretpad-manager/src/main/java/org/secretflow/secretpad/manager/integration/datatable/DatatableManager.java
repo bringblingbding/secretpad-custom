@@ -236,15 +236,11 @@ public class DatatableManager extends AbstractDatatableManager {
             List<String> types) {
         LOGGER.info("Find datatable with kuscia api with node id = {}, filter by usermanul vendor.", nodeId);
         List<DatatableDTO> datatableDTOList = findByNodeId(nodeId, DATA_VENDOR_MANUAL);
-//===========================这一段如果使用mysql可能超时，3中这里用了6秒钟==================================================//
         //feature table
-        LOGGER.info("debug3-------------------------------------------------");
         List<DatatableDTO> featureTableDTOList = findHttpFeatureTableByNodeId(nodeId);
-        LOGGER.info("debug7-------------------------------------------------");
         if (!CollectionUtils.isEmpty(featureTableDTOList)) {
             datatableDTOList.addAll(featureTableDTOList);
-        }
-//=======================================================================================================//        
+        }        
         LOGGER.info("The datatable list len = {}, now filter by status = {}", datatableDTOList.size(), statusFilter);
         datatableDTOList = filterByStatus(datatableDTOList, statusFilter);
         LOGGER.info("After filter by status the datatable list len = {}, now filter by datatable name = {}", datatableDTOList.size(), datatableNameFilter);
@@ -274,12 +270,8 @@ public class DatatableManager extends AbstractDatatableManager {
     }
 
     private List<DatatableDTO> findHttpFeatureTableByNodeId(String nodeId) {
-        LOGGER.info("debug4-------------------------------------------------");
-//=================================这里总共消耗了5秒钟====================================================//
         List<DatatableDTO> featureList = new ArrayList<>();
         List<FeatureTableDO> featureTableDOList = featureTableRepository.findByNodeId(nodeId);
-//=======================================================================================================//
-        LOGGER.info("debug5-------------------------------------------------");
         if (!CollectionUtils.isEmpty(featureTableDOList)) {
             for (FeatureTableDO featureTableDO : featureTableDOList) {
                 DatatableDTO datatableDTO = DatatableDTO.builder()
@@ -299,7 +291,6 @@ public class DatatableManager extends AbstractDatatableManager {
                 featureList.add(datatableDTO);
             }
         }
-        LOGGER.info("debug6-------------------------------------------------");
         return featureList;
     }
 
@@ -320,13 +311,11 @@ public class DatatableManager extends AbstractDatatableManager {
         Domaindata.ListDomainDataResponse responses = kusciaGrpcClientAdapter.listDomainData(
                 Domaindata.ListDomainDataRequest.newBuilder()
                         .setData(builder.build()).build(), PlatformTypeEnum.CENTER.equals(PlatformTypeEnum.valueOf(plaformType)) ? localNodeId : nodeId);
-        LOGGER.info("debug1-------------------------------------------------");
         if (responses.getStatus().getCode() != 0) {
             LOGGER.error("lock up from kusciaapi failed: code={}, message={}, nodeId={}, vendor={}",
                     responses.getStatus().getCode(), responses.getStatus().getMessage(), nodeId, vendor);
             throw SecretpadException.of(DatatableErrorCode.QUERY_DATATABLE_FAILED);
         }
-        LOGGER.info("debug2-------------------------------------------------");
         return responses.getData().getDomaindataListList().stream().map(DatatableDTO::fromDomainData).collect(Collectors.toList());
     }
 

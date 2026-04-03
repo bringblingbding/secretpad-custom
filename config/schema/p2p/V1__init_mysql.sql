@@ -883,7 +883,7 @@ CREATE TABLE `user_accounts`  (
   `locked_invalid_time` datetime NULL DEFAULT NULL,
   `inst_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
   PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_name`(`name`) USING BTREE
+  UNIQUE INDEX `idx_name`(`name`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci ROW_FORMAT = Dynamic;
 
 -- ----------------------------
@@ -953,7 +953,7 @@ CREATE TABLE `vote_request`  (
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--------- add mock data --------------
+-- add mock data
 
 -- resource
 insert ignore into sys_resource(resource_type, resource_code, resource_name)
@@ -1106,8 +1106,8 @@ insert ignore into sys_resource(resource_type, resource_code, resource_name)
 values ('API', 'USER_UPDATE_PWD', 'USER_UPDATE_PWD');
 
 
------------
---  role --
+
+-- role --
 insert ignore into sys_role(role_code, role_name)
 values ('ADMIN', '管理员');
 insert ignore into sys_role(role_code, role_name)
@@ -1117,9 +1117,9 @@ values ('EDGE_USER', 'Edge 用户');
 insert ignore into sys_role(role_code, role_name)
 values ('P2P_NODE', 'P2P 用户');
 
------------
--- role resource --
-------------
+
+-- role resource 
+
 -- Center admin user
 insert ignore into sys_role_resource_rel(role_code, resource_code)
 values ('CENTER_ADMIN', 'ALL_INTERFACE_RESOURCE');

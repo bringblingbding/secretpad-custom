@@ -1,5 +1,7 @@
 package org.secretflow.secretpad.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +10,7 @@ import org.secretflow.secretpad.common.errorcode.StrategyUsageControlErrorCode;
 import org.secretflow.secretpad.common.exception.SecretpadException;
 import org.secretflow.secretpad.persistence.entity.StrategyUsageDO;
 import org.secretflow.secretpad.persistence.entity.StrategyUsageInfoDO;
+import org.secretflow.secretpad.persistence.repository.StrategyUsageDynamicRepository;
 import org.secretflow.secretpad.persistence.repository.StrategyUsageInfoRepository;
 import org.secretflow.secretpad.persistence.repository.StrategyUsageRepository;
 import org.secretflow.secretpad.service.model.strategyusageengine.StrategyUsageEngineRequest;
@@ -25,6 +28,9 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
     private final StrategyUsageInfoRepository infoRepository;
     // 核心修改：通过此 Service 调用 StrategyUsageDynamicRepository
     private final StrategyUsageDynamicServiceImpl strategyUsageDynamicService;
+    private final StrategyUsageDynamicRepository strategyUsageDynamicRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -48,9 +54,9 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
 //            currentPhase = "DATA_STATE_AND_COMMUNICATION";
 //            checkDataStateAndCommunication(context.getInfo(), request);
 
-            // 4. 行为权限检查 (按需取消注释)
-            // currentPhase = "ACTION_PERMISSION";
-            // checkActionPermission(context.getInfo(), request);
+//             4. 行为权限检查 (按需取消注释)
+             currentPhase = "ACTION_PERMISSION";
+             checkActionPermission(context.getInfo(), request);
 
             // currentPhase = "STORAGE_CONSTRAINT";
             // checkStorageConstraint(context.getInfo(), request);
@@ -209,9 +215,92 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
     }
 
     private void checkActionPermission(StrategyUsageInfoDO s, StrategyUsageEngineRequest r) {
+        // 1. 确定交付类型和对应的配置 JSON
+        String jsonConfig = null;
+        if ("2".equals(s.getDeliveryType())) {
+            jsonConfig = s.getInternalDelivery();
+        } else if ("1".equals(s.getDeliveryType())) {
+            jsonConfig = s.getDirectDelivery();
+        }
+
+        if (StringUtils.isBlank(jsonConfig)) {
+            throwAuthError("delivery type configuration is missing");
+        }
+
+        try {
+            JsonNode node = objectMapper.readTree(jsonConfig);
+
+            // A. 是否启用
+            if (node.has("enabled") && !node.get("enabled").asBoolean()) {
+                throwAuthError("internal delivery is disabled by strategy");
+            }
+
+            // B. 单次上限校验 (maxSingleLimit)
+
+
+            // C. 累计次数校验 (maxTotalCount)
+            if (node.has("maxTotalCount")) {
+                long maxTotal = node.get("maxTotalCount").asLong();
+                long actualTotal = strategyUsageDynamicRepository.countByProjectIdAndCheckResult(r.getProjectId(), "PASS");
+                if (actualTotal >= maxTotal) {
+                    throwAuthError(String.format("total usage count [%d] reaches strategy limit [%d]",
+                            actualTotal, maxTotal));
+                }
+            }
+
+            // D. 频率限制校验 (rateLimit: {"count":100, "timeUnit":"HOURS"})
+            if (node.has("rateLimit")) {
+                JsonNode rate = node.get("rateLimit");
+                int rateCount = rate.get("count").asInt();
+                String timeUnit = rate.get("timeUnit").asText(); // HOURS, DAYS 等
+
+                LocalDateTime windowStart = calculateWindowStart(timeUnit);
+                // 统计从 windowStart 到现在的通过次数
+                long recentCount = strategyUsageDynamicRepository.countByProjectIdAndCheckResultAndCurrentOperationTimeAfter(
+                        r.getProjectId(), "PASS", windowStart);
+
+                if (recentCount >= rateCount) {
+                    throwAuthError(String.format("rate limit exceeded: [%d] requests in last [%s], limit is [%d]",
+                            recentCount, timeUnit, rateCount));
+                }
+            }
+
+            // E. 累计额度校验 (maxTotalLimit)
+
+        } catch (SecretpadException se) {
+            throw se;
+        } catch (Exception e) {
+            log.error("Parse internal_delivery JSON error", e);
+            throwAuthError("strategy delivery config is invalid");
+        }
 
     }
 
+    // 辅助方法：计算频率窗口起始时间，从当前时间开始，倒退一个单位
+    private LocalDateTime calculateWindowStart(String unit) {
+        if (StringUtils.isBlank(unit)) {
+            // 如果单位为空，默认按分钟处理，或者抛出异常
+            return LocalDateTime.now().minusMinutes(1);
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // 使用 switch 处理不同单位 (忽略大小写)
+        switch (unit.toUpperCase()) {
+            case "SECONDS":
+                return now.minusSeconds(1);
+            case "MINUTES":
+                return now.minusMinutes(1);
+            case "HOURS":
+                return now.minusHours(1);
+            case "DAYS":
+                return now.minusDays(1);
+            default:
+                // 未知单位默认回退到一分钟，并记录警告日志
+                log.warn("Unknown rateLimit timeUnit: {}, fallback to MINUTES", unit);
+                return now.minusMinutes(1);
+        }
+    }
 
     private void checkStorageConstraint(StrategyUsageInfoDO s, StrategyUsageEngineRequest r) {
 

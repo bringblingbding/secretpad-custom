@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -94,4 +95,15 @@ public interface StrategyUsageDynamicRepository extends BaseRepository<StrategyU
     @Transactional
     @Query(value = "UPDATE strategy_usage_dynamic SET is_deleted = 1, gmt_modified = NOW() WHERE usage_id = :usageId", nativeQuery = true)
     int softDelete(@Param("usageId") String usageId);
+
+    // 统计该项目下某种检查结果的累计次数（用于 maxTotalCount）
+    long countByProjectIdAndCheckResult(String projectId, String checkResult);
+
+    // 统计该项目在特定时间范围内的成功次数（用于 rateLimit）
+//    SELECT COUNT(*)
+//    FROM strategy_usage_dynamic
+//    WHERE project_id = ?              -- 1. 限定项目
+//    AND check_result = 'PASS'       -- 2. 只计算成功的记录
+//    AND current_operation_time > ?  -- 3. 只计算某个时间点之后的记录
+    long countByProjectIdAndCheckResultAndCurrentOperationTimeAfter(String projectId, String checkResult, LocalDateTime time);
 }

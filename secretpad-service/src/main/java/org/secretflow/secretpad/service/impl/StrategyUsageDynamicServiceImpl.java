@@ -53,16 +53,9 @@ public class StrategyUsageDynamicServiceImpl implements StrategyUsageDynamicServ
                     .projectId(projectId)
                     .usageCount((int) currentCount)
                     .currentOperationTime(operationTime)
-                    .region(request.getCurrentRegion())
-                    .position(request.getCurrentPosition())
-                    .env(request.getEnvironmentType())
                     .users(request.getUserId())
                     .usageConnectors(request.getConnectorId())
                     .role(request.getUserRole())
-                    .requiredDataState(request.getCurrentDataState())
-                    .protocols(request.getProtocol())
-                    .storageLocations(request.getTargetStorageLocation())
-                    .retentionDays(request.getRetentionDays())
 
                     // 结果与异常
                     .checkResult(checkResult)

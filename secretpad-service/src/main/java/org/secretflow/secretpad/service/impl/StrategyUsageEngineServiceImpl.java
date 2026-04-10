@@ -19,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import org.secretflow.secretpad.service.model.strategyusageengine.StrategyUsageExecutionResult;
 
 @Slf4j
 @Service
@@ -50,16 +53,9 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
             currentPhase = "ENVIRONMENT_AND_SUBJECT";
             checkEnvironmentAndSubject(context.getInfo(), request);
 
-//            // 3. 数据状态与通信检查
-//            currentPhase = "DATA_STATE_AND_COMMUNICATION";
-//            checkDataStateAndCommunication(context.getInfo(), request);
-
-//             4. 行为权限检查 (按需取消注释)
+//             4. 行为权限检查 (对交付和操作)
              currentPhase = "ACTION_PERMISSION";
              checkActionPermission(context.getInfo(), request);
-
-            // currentPhase = "STORAGE_CONSTRAINT";
-            // checkStorageConstraint(context.getInfo(), request);
 
             // 记录成功日志
             strategyUsageDynamicService.record(
@@ -101,6 +97,26 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
             );
             throw e;
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StrategyUsageExecutionResult validateAndInject(StrategyUsageEngineRequest request) {
+        // 先走一遍既有的强校验流程
+        validate(request);
+
+        // 获取该策略并准备参数注入
+        StrategyUsageContext context = fetchStrategyContext(request);
+        Map<String, Object> injectedParams = new LinkedHashMap<>();
+
+        // TODO: 在这里解析义务(compliance_obligations)，组装 injectedParams
+        // 例如：
+        // injectedParams.put("setEncrypt", true);
+        
+        return StrategyUsageExecutionResult.builder()
+                .isPassed(true)
+                .injectedParams(injectedParams)
+                .build();
     }
 
     private StrategyUsageContext fetchStrategyContext(StrategyUsageEngineRequest request) {
@@ -159,26 +175,7 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
             }
         }
 
-        // 5. 位置限制 (Position Limit)
-        if (StringUtils.isNotBlank(s.getPositionLimit())
-                && !checkCsvContains(s.getPositionLimit(), r.getCurrentPosition())) {
-            throwAuthError(String.format("current position [%s] is not allowed. permitted: [%s]",
-                    r.getCurrentPosition(), s.getPositionLimit()));
-        }
-
-        // 6. 地域限制 (Region Limit)
-        if (StringUtils.isNotBlank(s.getRegionLimit())
-                && !checkCsvContains(s.getRegionLimit(), r.getCurrentRegion())) {
-            throwAuthError(String.format("current region [%s] is not allowed. permitted: [%s]",
-                    r.getCurrentRegion(), s.getRegionLimit()));
-        }
-
-        // 7. 环境要求 (Environment Requirements)
-        if (StringUtils.isNotBlank(s.getEnvRequirements())
-                && !checkCsvContains(s.getEnvRequirements(), r.getEnvironmentType())) {
-            throwAuthError(String.format("current environment [%s] is not allowed. requirements: [%s]",
-                    r.getEnvironmentType(), s.getEnvRequirements()));
-        }
+        // (位置、地域、运行环境等由于前端难以提供，暂不在此处强制校验)
 
         // 8. 用户校验
         if (StringUtils.isNotBlank(s.getAllowedUsers())
@@ -202,29 +199,29 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
         }
     }
 
-    private void checkDataStateAndCommunication(StrategyUsageInfoDO s, StrategyUsageEngineRequest r) {
-        if (StringUtils.isNotBlank(s.getRequiredDataState()) && StringUtils.isNotBlank(r.getCurrentDataState())) {
-            if (!s.getRequiredDataState().equalsIgnoreCase(r.getCurrentDataState())) {
-                throwAuthError("current data state does not match strategy requirement: " + s.getRequiredDataState());
+    private void checkActionPermission(StrategyUsageInfoDO s, StrategyUsageEngineRequest r) {
+        // deliveryType 是分号分隔的多值字段，如 "1;2;3" 或 "1;2"
+        // 当前仅校验不出域交付 (type=2)
+        if (StringUtils.isBlank(s.getDeliveryType())) {
+            throwAuthError("delivery type is not configured");
+        }
+
+        // 检查 deliveryType 中是否包含 "2"（不出域交付）
+        boolean hasInternal = false;
+        for (String type : s.getDeliveryType().split(";")) {
+            if ("2".equals(type.trim())) {
+                hasInternal = true;
+                break;
             }
         }
 
-        if (Boolean.TRUE.equals(s.getIsVpnRequired()) && !Boolean.TRUE.equals(r.getIsVpnUsed())) {
-            throwAuthError("vpn is required");
-        }
-    }
-
-    private void checkActionPermission(StrategyUsageInfoDO s, StrategyUsageEngineRequest r) {
-        // 1. 确定交付类型和对应的配置 JSON
-        String jsonConfig = null;
-        if ("2".equals(s.getDeliveryType())) {
-            jsonConfig = s.getInternalDelivery();
-        } else if ("1".equals(s.getDeliveryType())) {
-            jsonConfig = s.getDirectDelivery();
+        if (!hasInternal) {
+            throwAuthError("strategy does not include internal delivery (type=2)");
         }
 
+        String jsonConfig = s.getInternalDelivery();
         if (StringUtils.isBlank(jsonConfig)) {
-            throwAuthError("delivery type configuration is missing");
+            throwAuthError("internal delivery is declared but has no config");
         }
 
         try {
@@ -237,43 +234,46 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
 
             // B. 单次上限校验 (maxSingleLimit)
 
+            // C. 累计次数校验 (maxTotalCount) & 频率限制校验
+            checkRateAndLimitFromNode(node, r.getProjectId());
 
-            // C. 累计次数校验 (maxTotalCount)
-            if (node.has("maxTotalCount")) {
-                long maxTotal = node.get("maxTotalCount").asLong();
-                long actualTotal = strategyUsageDynamicRepository.countByProjectIdAndCheckResult(r.getProjectId(), "PASS");
-                if (actualTotal >= maxTotal) {
-                    throwAuthError(String.format("total usage count [%d] reaches strategy limit [%d]",
-                            actualTotal, maxTotal));
-                }
-            }
-
-            // D. 频率限制校验 (rateLimit: {"count":100, "timeUnit":"HOURS"})
-            if (node.has("rateLimit")) {
-                JsonNode rate = node.get("rateLimit");
-                int rateCount = rate.get("count").asInt();
-                String timeUnit = rate.get("timeUnit").asText(); // HOURS, DAYS 等
-
-                LocalDateTime windowStart = calculateWindowStart(timeUnit);
-                // 统计从 windowStart 到现在的通过次数
-                long recentCount = strategyUsageDynamicRepository.countByProjectIdAndCheckResultAndCurrentOperationTimeAfter(
-                        r.getProjectId(), "PASS", windowStart);
-
-                if (recentCount >= rateCount) {
-                    throwAuthError(String.format("rate limit exceeded: [%d] requests in last [%s], limit is [%d]",
-                            recentCount, timeUnit, rateCount));
-                }
-            }
-
-            // E. 累计额度校验 (maxTotalLimit)
+            // D. 累计额度校验 (maxTotalLimit)
 
         } catch (SecretpadException se) {
             throw se;
         } catch (Exception e) {
             log.error("Parse internal_delivery JSON error", e);
-            throwAuthError("strategy delivery config is invalid");
+            throwAuthError("strategy internal delivery config is invalid");
+        }
+    }
+
+    /**
+     * 校验累计使用次数和频率窗口限制
+     */
+    private void checkRateAndLimitFromNode(JsonNode node, String projectId) {
+        if (node.has("maxTotalCount")) {
+            long maxTotal = node.get("maxTotalCount").asLong();
+            long actualTotal = strategyUsageDynamicRepository.countByProjectIdAndCheckResult(projectId, "PASS");
+            if (actualTotal >= maxTotal) {
+                throwAuthError(String.format("total usage count [%d] reaches strategy limit [%d]",
+                        actualTotal, maxTotal));
+            }
         }
 
+        if (node.has("rateLimit")) {
+            JsonNode rate = node.get("rateLimit");
+            int rateCount = rate.get("count").asInt();
+            String timeUnit = rate.get("timeUnit").asText();
+
+            LocalDateTime windowStart = calculateWindowStart(timeUnit);
+            long recentCount = strategyUsageDynamicRepository.countByProjectIdAndCheckResultAndCurrentOperationTimeAfter(
+                    projectId, "PASS", windowStart);
+
+            if (recentCount >= rateCount) {
+                throwAuthError(String.format("rate limit exceeded: [%d] requests in last [%s], limit is [%d]",
+                        recentCount, timeUnit, rateCount));
+            }
+        }
     }
 
     // 辅助方法：计算频率窗口起始时间，从当前时间开始，倒退一个单位
@@ -302,9 +302,6 @@ public class StrategyUsageEngineServiceImpl implements org.secretflow.secretpad.
         }
     }
 
-    private void checkStorageConstraint(StrategyUsageInfoDO s, StrategyUsageEngineRequest r) {
-
-    }
 
     private void throwAuthError(String detail) {
         throw SecretpadException.of(StrategyUsageControlErrorCode.STRATEGY_CHECK_FAILED, detail);

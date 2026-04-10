@@ -25,6 +25,18 @@ public class BasePermissionCheckRequest {
     private String projectId;
 
     /**
+     * 数据所在节点 ID
+     */
+    @Schema(description = "节点ID", example = "node-abc")
+    private String nodeId;
+
+    /**
+     * 数据产品/结果标识 (Kuscia refId)
+     */
+    @Schema(description = "数据标识", example = "domaindata-123")
+    private String domainDataId;
+
+    /**
      * 当前操作用户 ID
      */
     @Schema(description = "用户ID", example = "yqtest")
